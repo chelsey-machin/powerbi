@@ -15,8 +15,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run Script to Build .mez
-        run: |
-          powershell.exe -ExecutionPolicy Bypass -File build_script.ps1
+        run: ./build_script.ps1
       
       - name: Copy .mez to Temporary Directory
         run: |
