@@ -14,13 +14,19 @@ jobs:
       - name: Checkout dev repo
         uses: actions/checkout@v2
 
-      - name: Run Script to Build .mez
-        run: ./build_script.ps1
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v1
+        with:
+          msbuild-version: 16.0 
       
-      - name: Copy .mez to Temporary Directory
+      - name: Build MEZ
+        run: msbuild JamfPro/JamfPro.mproj /p:Configuration=Release
+
+      - name: Compress files into MEZ
         run: |
           mkdir temp
-          cp JamfPro.mez temp/
+          cp -r ./* temp/
+          zip -r JamfPro.mez temp/*
 
       - name: Checkout Master
         run: |
