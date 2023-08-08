@@ -45,7 +45,7 @@ validateUrlScheme = (url as text) as text => if (Uri.Parts(url)[Scheme] <> "http
 initializeComputerRecord = (url as text) as table =>
     let
         // number of total devices in computer inventory record
-        devices_count = UAPIResource(url, "uapi/v1/computers-inventory")[totalCount],
+        devices_count = UAPIResource(url, "api/v1/computers-inventory")[totalCount],
         pageSize = 100,
         pages = Number.RoundDown(devices_count/pageSize),
         page_list = {1..pages},
@@ -55,7 +55,7 @@ initializeComputerRecord = (url as text) as table =>
 
 initializeMobileRecord = (url as text) as table =>
     let
-        devices_count = UAPIResource(url, "uapi/v2/mobile-devices")[totalCount],
+        devices_count = UAPIResource(url, "api/v2/mobile-devices")[totalCount],
         pageSize = 100,
         pages = Number.RoundDown(devices_count/pageSize),
         page_list = {1..pages},
@@ -191,19 +191,21 @@ computersImplementation = (baseUrl as text, pages_table as table) as table =>
 
         pageSize = "100",
 
-
         temp_table = Table.AddColumn(
             pages_table,
             "response", 
             each Table.FromRecords(
-                UAPIResource(baseUrl, "uapi/v1/computers-inventory", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results]
+                UAPIResource(baseUrl, "api/v1/computers-inventory", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results]
             )
         ),
         computer_table = Table.Combine(temp_table[response]),
-        selected_table = Table.RemoveColumns(computer_table, "extensionAttributes"),
-        expand_general = Table.ExpandRecordColumn(selected_table,
-            "general",
-            {"name",
+        selected_table = 
+            try Table.RemoveColumns(computer_table, "extensionAttributes")
+            otherwise computer_table,
+        expand_general = 
+            try Table.ExpandRecordColumn(selected_table,
+                "general",
+                {"name",
                 "lastIpAddress",
                 "lastReportedIp",
                 "jamfBinaryVersion",
@@ -224,19 +226,23 @@ computersImplementation = (baseUrl as text, pages_table as table) as table =>
                 "enrolledViaAutomatedDeviceEnrollment",
                 "userApprovedMdm",
                 "enrollmentMethod"}
-        ),
-        expand_disk_encryption = Table.ExpandRecordColumn(expand_general, 
-            "diskEncryption",               
-            {"individualRecoveryKeyValidityStatus",
+            )
+            otherwise selected_table,
+        expand_disk_encryption = 
+            try Table.ExpandRecordColumn(expand_general, 
+                "diskEncryption",               
+                {"individualRecoveryKeyValidityStatus",
                 "institutionalRecoveryKeyPresent",
                 "diskEncryptionConfigurationName",
                 "fileVault2EligibilityMessage",
                 "fileVault2EnabledUserNames",
                 "bootPartitionEncryptionDetails"}
-        ),
-        expand_purchasing = Table.ExpandRecordColumn(expand_disk_encryption, 
-            "purchasing",
-            {"purchased",
+            )
+            otherwise expand_general,
+        expand_purchasing = 
+            try Table.ExpandRecordColumn(expand_disk_encryption, 
+                "purchasing",
+                {"purchased",
                 "leased",
                 "poNumber",
                 "lifeExpectancy",
@@ -248,10 +254,12 @@ computersImplementation = (baseUrl as text, pages_table as table) as table =>
                 "leaseDate",
                 "poDate",
                 "warrantyDate"}
-        ),
-        expand_user_and_location = Table.ExpandRecordColumn(expand_purchasing, 
-            "userAndLocation", 
-            {"username",
+            )
+            otherwise expand_disk_encryption,
+        expand_user_and_location = 
+            try Table.ExpandRecordColumn(expand_purchasing, 
+                "userAndLocation", 
+                {"username",
                 "realname",
                 "email",
                 "position",
@@ -259,82 +267,97 @@ computersImplementation = (baseUrl as text, pages_table as table) as table =>
                 "departmentId",
                 "buildingId",
                 "room"}
-        ),
-        expand_hardware = Table.ExpandRecordColumn(expand_user_and_location, 
-            "hardware",
-            {"make",
-            "model",
-            "modelIdentifier",
-            "serialNumber",
-            "processorSpeedMhz",
-            "processorCount",
-            "coreCount",
-            "processorType",
-            "processorArchitecture",
-            "busSpeedMhz",
-            "cacheSizeKilobytes",
-            "networkAdapterType",
-            "macAddress",
-            "altNetworkAdapterType",
-            "altMacAddress",
-            "totalRamMegabytes",
-            "openRamSlots",
-            "batteryCapacityPercent",
-            "smcVersion",
-            "nicSpeed",
-            "opticalDrive",
-            "bootRom",
-            "bleCapable",
-            "supportsIosAppInstalls",
-            "appleSilicon"}
-        ),
-        expand_operating_system = Table.ExpandRecordColumn(expand_hardware, 
-            "operatingSystem", 
-            {"name",
-            "version",
-            "build",
-            "activeDirectoryStatus",
-            "fileVault2Status",
-            "softwareUpdateDeviceId"}, 
-            {"os name",
-            "os version",
-            "os build",
-            "activeDirectoryStatus",
-            "fileVault2Status",
-            "softwareUpdateDeviceId"}
-        ),
-        expand_remote_management = Table.ExpandRecordColumn(expand_operating_system,
-            "remoteManagement",
-            {"managed",
-            "managementUsername"}
-        ),
-        expand_mdm_capable = Table.ExpandRecordColumn(expand_remote_management,
-            "mdmCapable",
-            {"capable",
-            "capableUsers"}
-        ),
-        expand_site = Table.ExpandRecordColumn(expand_mdm_capable,
-            "site",
-            {"id",
-            "name"},
-            {"siteId",
-            "siteName"}
-        ),
-        expand_fileVault2_enabled_usernames = Table.ExpandListColumn(expand_site, "fileVault2EnabledUserNames"),
-        expand_security = Table.ExpandRecordColumn(expand_fileVault2_enabled_usernames, 
-            "security",
-            {"sipStatus",
-            "gatekeeperStatus",
-            "xprotectVersion",
-            "autoLoginDisabled",
-            "remoteDesktopEnabled",
-            "activationLockEnabled",
-            "secureBootLevel",
-            "externalBootLevel",
-            "bootstrapTokenAllowed",
-            "recoveryLockEnabled",
-            "firewallEnabled"}
-        )
+            )
+            otherwise expand_purchasing,
+        expand_hardware = 
+            try Table.ExpandRecordColumn(expand_user_and_location, 
+                "hardware",
+                {"make",
+                "model",
+                "modelIdentifier",
+                "serialNumber",
+                "processorSpeedMhz",
+                "processorCount",
+                "coreCount",
+                "processorType",
+                "processorArchitecture",
+                "busSpeedMhz",
+                "cacheSizeKilobytes",
+                "networkAdapterType",
+                "macAddress",
+                "altNetworkAdapterType",
+                "altMacAddress",
+                "totalRamMegabytes",
+                "openRamSlots",
+                "batteryCapacityPercent",
+                "smcVersion",
+                "nicSpeed",
+                "opticalDrive",
+                "bootRom",
+                "bleCapable",
+                "supportsIosAppInstalls",
+                "appleSilicon"}
+            )
+            otherwise expand_user_and_location,
+        expand_operating_system = 
+            try Table.ExpandRecordColumn(expand_hardware, 
+                "operatingSystem", 
+                {"name",
+                "version",
+                "build",
+                "activeDirectoryStatus",
+                "fileVault2Status",
+                "softwareUpdateDeviceId"}, 
+                {"os name",
+                "os version",
+                "os build",
+                "activeDirectoryStatus",
+                "fileVault2Status",
+                "softwareUpdateDeviceId"}
+            )
+            otherwise expand_hardware,
+        expand_remote_management = 
+            try Table.ExpandRecordColumn(expand_operating_system,
+                "remoteManagement",
+                {"managed",
+                "managementUsername"}
+            )
+            otherwise expand_operating_system,
+        expand_mdm_capable = 
+            try Table.ExpandRecordColumn(expand_remote_management,
+                "mdmCapable",
+                {"capable",
+                "capableUsers"}
+            )
+            otherwise expand_remote_management,
+        expand_site = 
+            try Table.ExpandRecordColumn(expand_mdm_capable,
+                "site",
+                {"id",
+                "name"},
+                {"siteId",
+                "siteName"}
+            )
+            otherwise expand_mdm_capable,
+        expand_fileVault2_enabled_usernames = 
+            try Table.ExpandListColumn(expand_site, "fileVault2EnabledUserNames")
+            otherwise expand_site,
+        expand_security = 
+            try Table.ExpandRecordColumn(expand_fileVault2_enabled_usernames, 
+                "security",
+                {"sipStatus",
+                "gatekeeperStatus",
+                "xprotectVersion",
+                "autoLoginDisabled",
+                "remoteDesktopEnabled",
+                "activationLockEnabled",
+                "secureBootLevel",
+                "externalBootLevel",
+                "bootstrapTokenAllowed",
+                "recoveryLockEnabled",
+                "firewallEnabled"}
+            )
+            otherwise expand_fileVault2_enabled_usernames
     in
         expand_security;
 
@@ -346,12 +369,20 @@ computerApplicationsImplementation = (baseUrl as text, pages_table as table) as 
 
         pageSize = "100",
 
-        temp_table = Table.AddColumn(pages_table, "response", each Table.FromRecords(UAPIResource(baseUrl, "uapi/v1/computers-inventory", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results])),
+        temp_table = Table.AddColumn(pages_table, "response", each Table.FromRecords(UAPIResource(baseUrl, "api/v1/computers-inventory", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results])),
         computer_table = Table.Combine(temp_table[response]),
-        selected_table = Table.SelectColumns(computer_table, {"id", "applications"}),
-        expand_applications = Table.ExpandListColumn(selected_table, "applications"),
-        filtered_table = Table.SelectRows(expand_applications, each [applications] <> null),
-        expand_applications2 = Table.ExpandRecordColumn(filtered_table, "applications", {"name", "path", "version", "macAppStore", "sizeMegabytes", "bundleId", "updateAvailable", "externalVersionId"})
+        selected_table = 
+            try Table.SelectColumns(computer_table, {"id", "applications"})
+            otherwise computer_table,
+        expand_applications = 
+            try Table.ExpandListColumn(selected_table, "applications")
+            otherwise selected_table,
+        filtered_table = 
+            try Table.SelectRows(expand_applications, each [applications] <> null)
+            otherwise expand_applications,
+        expand_applications2 = 
+            try Table.ExpandRecordColumn(filtered_table, "applications", {"name", "path", "version", "macAppStore", "sizeMegabytes", "bundleId", "updateAvailable", "externalVersionId"})
+            otherwise filtered_table
     in
         expand_applications2;
 
@@ -361,8 +392,7 @@ mobileDevicesImplementation = (baseUrl as text, pages_table as table) as table =
     let
         sections = List.Transform({
             "General",
-            "Hardware",
-            "Security"
+            "Hardware"
         }, Text.Upper),
 
         pageSize = "100",
@@ -379,7 +409,6 @@ mobileDevicesImplementation = (baseUrl as text, pages_table as table) as table =
             "userProfiles",
             "extensionAttributes",
             "general",
-            "security",
             "ebooks",
             "network",
             "serviceSubscriptions",
@@ -391,96 +420,106 @@ mobileDevicesImplementation = (baseUrl as text, pages_table as table) as table =
             pages_table, 
             "response", 
             each Table.FromRecords(
-                UAPIResource(baseUrl, "uapi/v2/mobile-devices/detail", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results],
+                UAPIResource(baseUrl, "api/v2/mobile-devices/detail", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections, filter = Text.From("deviceId==''")])[results],
                 column_names,
                 MissingField.UseNull
             )
         ),
 
         mobile_devices_table = Table.Combine(temp_table_mobile[response]),
-        selected_table = Table.RemoveColumns(mobile_devices_table, "extensionAttributes"),
-        expand_hardware = Table.ExpandRecordColumn(selected_table,
-            "hardware",
-            {"capacityMb",
-            "availableSpaceMb",
-            "usedSpacePercentage",
-            "batteryLevel",
-            "serialNumber",
-            "wifiMacAddress",
-            "bluetoothMacAddress",
-            "modemFirmwareVersion",
-            "model",
-            "modelIdentifier",
-            "modelNumber",
-            "bluetoothLowEnergyCapable",
-            "deviceId",
-            "hardware.extensionAttributes"}
-        ),
-        expand_general = Table.ExpandRecordColumn(expand_hardware,
-            "general",
-            {"udid",
-            "displayName",
-            "assetTag",
-            "siteId",
-            "lastInventoryUpdateDate",
-            "osVersion",
-            "osRapidSecurityResponse",
-            "osBuild",
-            "osSupplementalBuildVersion",
-            "softwareUpdateDeviceId",
-            "ipAddress",
-            "managed",
-            "supervised",
-            "deviceOwnershipType",
-            "enrollmentMethodPrestage",
-            "enrollmentSessionTokenValid",
-            "lastEnrolledDate",
-            "mdmProfileExpirationDate",
-            "timeZone",
-            "declarativeDeviceManagementEnabled",
-            "general.extensionAttributes",
-            "sharedIpad",
-            "diagnosticAndUsageReportingEnabled",
-            "appAnalyticsEnabled",
-            "residentUsers",
-            "quotaSize",
-            "temporarySessionOnly",
-            "temporarySessionTimeout",
-            "userSessionTimeout",
-            "syncedToComputer",
-            "maximumSharediPadUsersStored",
-            "lastBackupDate",
-            "deviceLocatorServiceEnabled",
-            "doNotDisturbEnabled",
-            "cloudBackupEnabled",
-            "lastCloudBackupDate",
-            "locationServicesForSelfServiceMobileEnabled",
-            "itunesStoreAccountActive",
-            "exchangeDeviceId",
-            "tethered"}
-        ),
-        null_updates = Table.TransformColumns(expand_general, {{"security", each if _ = null then [] else _}}),
-        expand_security = Table.ExpandRecordColumn(null_updates,
-            "security",
-            {"dataProtected",
-            "blockLevelEncryptionCapable",
-            "fileLevelEncryptionCapable",
-            "passcodePresent",
-            "passcodeCompliant",
-            "passcodeCompliantWithProfile",
-            "hardwareEncryption",
-            "activationLockEnabled",
-            "jailBreakDetected",
-            "passcodeLockGracePeriodEnforcedSeconds",
-            "personalDeviceProfileCurrent",
-            "lostModeEnabled",
-            "lostModePersistent",
-            "lostModeMessage",
-            "lostModePhoneNumber",
-            "lostModeFootnote",
-            "lostModeLocation",
-            "lostModeEnabledDate"}
-        )
+        selected_table = 
+            try Table.RemoveColumns(mobile_devices_table, "extensionAttributes")
+            otherwise mobile_devices_table,
+        expand_hardware = 
+            try Table.ExpandRecordColumn(selected_table,
+                "hardware",
+                {"capacityMb",
+                "availableSpaceMb",
+                "usedSpacePercentage",
+                "batteryLevel",
+                "serialNumber",
+                "wifiMacAddress",
+                "bluetoothMacAddress",
+                "modemFirmwareVersion",
+                "model",
+                "modelIdentifier",
+                "modelNumber",
+                "bluetoothLowEnergyCapable",
+                "deviceId",
+                "hardware.extensionAttributes"}
+                )
+            otherwise selected_table,
+        expand_general = 
+            try Table.ExpandRecordColumn(expand_hardware,
+                "general",
+                {"udid",
+                "displayName",
+                "assetTag",
+                "siteId",
+                "lastInventoryUpdateDate",
+                "osVersion",
+                "osRapidSecurityResponse",
+                "osBuild",
+                "osSupplementalBuildVersion",
+                "softwareUpdateDeviceId",
+                "ipAddress",
+                "managed",
+                "supervised",
+                "deviceOwnershipType",
+                "enrollmentMethodPrestage",
+                "enrollmentSessionTokenValid",
+                "lastEnrolledDate",
+                "mdmProfileExpirationDate",
+                "timeZone",
+                "declarativeDeviceManagementEnabled",
+                "general.extensionAttributes",
+                "sharedIpad",
+                "diagnosticAndUsageReportingEnabled",
+                "appAnalyticsEnabled",
+                "residentUsers",
+                "quotaSize",
+                "temporarySessionOnly",
+                "temporarySessionTimeout",
+                "userSessionTimeout",
+                "syncedToComputer",
+                "maximumSharediPadUsersStored",
+                "lastBackupDate",
+                "deviceLocatorServiceEnabled",
+                "doNotDisturbEnabled",
+                "cloudBackupEnabled",
+                "lastCloudBackupDate",
+                "locationServicesForSelfServiceMobileEnabled",
+                "itunesStoreAccountActive",
+                "exchangeDeviceId",
+                "tethered"}
+                )
+            otherwise expand_hardware,
+        null_updates = 
+            try Table.TransformColumns(expand_general, {{"security", each if _ = null then [] else _}})
+            otherwise expand_general,
+        expand_security = 
+            try Table.ExpandRecordColumn(null_updates,
+                "security",
+                {"dataProtected",
+                "blockLevelEncryptionCapable",
+                "fileLevelEncryptionCapable",
+                "passcodePresent",
+                "passcodeCompliant",
+                "passcodeCompliantWithProfile",
+                "hardwareEncryption",
+                "activationLockEnabled",
+                "jailBreakDetected",
+                "passcodeLockGracePeriodEnforcedSeconds",
+                "personalDeviceProfileCurrent",
+                "lostModeEnabled",
+                "lostModePersistent",
+                "lostModeMessage",
+                "lostModePhoneNumber",
+                "lostModeFootnote",
+                "lostModeLocation",
+                "lostModeEnabledDate"}
+            )
+            otherwise null_updates
     in
         expand_security;
 
@@ -516,47 +555,59 @@ mobileDevicesApplicationsImplementation = (baseUrl as text, pages_table as table
             pages_table, 
             "response", 
             each Table.FromRecords(
-                UAPIResource(baseUrl, "uapi/v2/mobile-devices/detail", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results],
+                UAPIResource(baseUrl, "api/v2/mobile-devices/detail", [#"page-size" = pageSize, page = Text.From(Number.From(_[Column1]) - 1), section = sections])[results],
             column_names,
             MissingField.UseNull
             )),
         mobile_devices_table = Table.Combine(temp_table[response]),
-        selected_table = Table.SelectColumns(mobile_devices_table, {"mobileDeviceId", "applications"}),
-        expand_applications = Table.ExpandListColumn(selected_table, "applications"),
-        filtered_table = Table.SelectRows(expand_applications, each [applications] <> null),
-        expand_applications2 = Table.ExpandRecordColumn(
-            filtered_table, 
-            "applications", 
-            {"identifier", 
-            "name", 
-            "version", 
-            "shortVersion", 
-            "managementStatus", 
-            "validationStatus", 
-            "bundleSize", 
-            "dynamicSize"}
-        )
+        selected_table = 
+            try Table.SelectColumns(mobile_devices_table, {"mobileDeviceId", "applications"})
+            otherwise mobile_devices_table,
+        expand_applications = 
+            try Table.ExpandListColumn(selected_table, "applications")
+            otherwise selected_table,
+        filtered_table = 
+            try Table.SelectRows(expand_applications, each [applications] <> null)
+            otherwise expand_applications,
+        expand_applications2 = 
+            try Table.ExpandRecordColumn(
+                filtered_table, 
+                "applications", 
+                {"identifier", 
+                "name", 
+                "version", 
+                "shortVersion", 
+                "managementStatus", 
+                "validationStatus", 
+                "bundleSize", 
+                "dynamicSize"}
+            )
+            otherwise filtered_table
     in
         expand_applications2;
 
 
 mobileDevicesGroupsImplementation = (deviceGroups as table) as table =>
     let
-        expandedTable = Table.ExpandRecordColumn(
-            deviceGroups, 
-            "mobileDeviceGroupDetails", 
-            {"criteria",
-            "site",
-            "mobile_devices"}
-        ),
-        expandedSite = Table.ExpandRecordColumn(
-            expandedTable,
-            "site",
-            {"id",
-            "name"},
-            {"site.id",
-            "site.name"}
-        )
+        expandedTable = 
+            try Table.ExpandRecordColumn(
+                deviceGroups, 
+                "mobileDeviceGroupDetails", 
+                {"criteria",
+                "site",
+                "mobile_devices"}
+            )
+            otherwise deviceGroups,
+        expandedSite = 
+            try Table.ExpandRecordColumn(
+                expandedTable,
+                "site",
+                {"id",
+                "name"},
+                {"site.id",
+                "site.name"}
+            )
+            otherwise expandedTable
     in
         expandedSite;
 
@@ -608,21 +659,25 @@ getComputerGroupDetails = (id as number, baseUrl as text) as record =>
 
 computerGroupsImplementation = (computerGroups as table) as table =>
     let
-        computerGroupsExpanded = Table.ExpandRecordColumn(
-        computerGroups,
-        "computerGroupDetails",
-        {"site",
-        "criteria",
-        "computers"}
-        ),
-        sitesExpanded = Table.ExpandRecordColumn(
-            computerGroupsExpanded,
-            "site",
-            {"id",
-            "name"},
-            {"site.id",
-            "site.name"}
-        )
+        computerGroupsExpanded = 
+            try Table.ExpandRecordColumn(
+                computerGroups,
+                "computerGroupDetails",
+                {"site",
+                "criteria",
+                "computers"}
+                )
+            otherwise computerGroups,
+        sitesExpanded = 
+            try Table.ExpandRecordColumn(
+                computerGroupsExpanded,
+                "site",
+                {"id",
+                "name"},
+                {"site.id",
+                "site.name"}
+            )
+            otherwise computerGroupsExpanded
     in
         sitesExpanded;
  

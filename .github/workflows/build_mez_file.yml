@@ -1,0 +1,34 @@
+name: Build .mez file and release on master
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  build_mez:
+    name: Build and release .mez
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev repo
+        uses: actions/checkout@v2
+
+      - name: Run Script to Build .mez
+        run: |
+          powershell.exe -ExecutionPolicy Bypass -File build_script.ps1
+      
+      - name: Copy .mez to Temporary Directory
+        run: |
+          mkdir temp
+          cp JamfPro.mez temp/
+
+      - name: Checkout Master
+        run: |
+          git checkout master
+
+      - name: Update MEZ in Master Branch
+        run: |
+          cp temp/JamfPro.mez JamfPro.mez
+          git add JamfPro.mez
+          git commit -m "Update .mez"
+          git push origin master
