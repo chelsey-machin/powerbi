@@ -1,15 +1,17 @@
 ﻿// Use this file to write queries to test your data connector
 section Testing;
 
+// swap out the URL in Contents() for your own Jamf Pro instance URL 
+// then add credentials in using the power query SDK credential helper for the instance's admin Username and Password
+result = JamfPro.Contents("https://yourjamfdomain.com");
+
 shared Testing.UnitTest = [
     // Put any common variables here if you only want them to be evaluated once
     // Fact(<Name of the Test>, <Expected Value>, <Actual Value>)
     // <Expected Value> and <Actual Value> can be a literal or let statement
     facts = {
         // this test checks that the global navigation table for the query returns the correct number of global tables / rows
-        // swap out the URL in JamfNavTable() for your own Jamf Pro instance URL 
-        // then add credentials in using the power query SDK credential helper for the instance's admin Username and Password
-        Fact("Nav table should return 6 rows", 6, Table.RowCount(JamfPro.JamfNavTable("https://yourJamfDomain.jamf.build")))
+        Fact("Nav table should return 6 rows", 6, Table.RowCount(result))
     },
     report = Facts.Summarize(facts)
 ][report];
