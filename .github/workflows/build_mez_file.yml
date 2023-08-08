@@ -28,7 +28,7 @@ jobs:
         working-directory: JamfPro
         run: msbuild /restore /consoleloggerparameters:NoSummary /property:GenerateFullPaths=true
 
-      -name: Upload .mez 
+      - name: Upload .mez 
         uses: actions/upload-artifact@v2
         with:
           name: .mez artifact
