@@ -9,7 +9,7 @@ $outputMEZFile = "./JamfPro.mez"
 # Collect all files in the development directory from above
 $allFiles = Get-ChildItem -Path $developmentDirectory -Recurse
 
-# Check if any files were found
+# Check if any files were found; if not receive error messaging
 if ($allFiles.Count -eq 0) {
     Write-Host "No files found in the JamfPro directory to package."
     exit 1
