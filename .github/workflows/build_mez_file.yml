@@ -1,6 +1,7 @@
 name: Build .mez file and release on master
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - development
