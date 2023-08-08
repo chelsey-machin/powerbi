@@ -680,10 +680,10 @@ computerGroupsImplementation = (computerGroups as table) as table =>
             otherwise computerGroupsExpanded
     in
         sitesExpanded;
- 
+
 // Data Source Kind description
 JamfPro = [
-    TestConnection = (dataSourcePath) => {"JamfPro.Contents", dataSourcePath},
+    TestConnection = (dataSourcePath) => {"JamfPro.JamfNavTable", dataSourcePath},
     Authentication = [
         UsernamePassword = [
             UsernameLabel="Enter your Jamf Pro username: ",
