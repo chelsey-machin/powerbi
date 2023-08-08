@@ -6,34 +6,30 @@ on:
     branches:
       - Development
 
+env:
+  SOLUTION_FILE_PATH: .
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
 jobs:
   build_mez:
     name: Build and release .mez
     runs-on: windows-latest
     steps:
       - name: Checkout dev repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1
 
-      
       - name: Build MEZ
-        run: msbuild JamfPro/JamfPro.mproj /p:Configuration=Release
+        working-directory: JamfPro
+        run: msbuild /restore /consoleloggerparameters:NoSummary /property:GenerateFullPaths=true
 
-      - name: Compress files into MEZ
-        run: |
-          mkdir temp
-          cp -r ./* temp/
-          zip -r JamfPro.mez temp/*
-
-      - name: Checkout Master
-        run: |
-          git checkout master
-
-      - name: Update MEZ in Master Branch
-        run: |
-          cp temp/JamfPro.mez JamfPro.mez
-          git add JamfPro.mez
-          git commit -m "Update .mez"
-          git push origin master
+      -name: Upload .mez 
+        uses: actions/upload-artifact@v2
+        with:
+          name: .mez artifact
+          path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
