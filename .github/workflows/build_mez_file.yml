@@ -1,4 +1,4 @@
-name: Build .mez file and release on master
+name: Build .mez file and release on master branch
 
 on:
   workflow_dispatch:
