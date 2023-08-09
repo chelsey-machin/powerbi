@@ -54,9 +54,19 @@ jobs:
           path: .\JamfPro.mez
 
       - name: Commit and Push Changes
+        uses: actions/checkout@v3
         run: |
           git config --global user.name "Automated GitHub Action"
           git config --global user.email "anemailaddress@jamf.com"
           git add JamfPro.mez
           git commit -m "Automated update to .mez file"
           git push
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "Automated GitHub Action"
+          git config --global user.email "anemailaddress@jamf.com"
+          git add JamfPro.mez
+          git commit -m "Automated update to .mez file"
+          git push
+
