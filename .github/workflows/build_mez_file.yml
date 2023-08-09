@@ -49,7 +49,7 @@ jobs:
   commit_to_master:
     name: Add and commit the new .mez to the master branch
     runs-on: windows-latest
-    needs: build-mez
+    needs: build_mez
     steps:
       - name: Checkout master repo
         uses: actions/checkout@v3
