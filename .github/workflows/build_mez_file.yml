@@ -34,29 +34,25 @@ jobs:
           name: .mez artifact
           path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
 
-      - name: Create Temporary Directory
-        run: mkdir $GITHUB_WORKSPACE/workflow/temp
-      
-      - name: Copy .mez to Temporary Directory
-        run: cp JamfPro/bin/AnyCPU/Debug/JamfPro.mez $GITHUB_WORKSPACE/workflow/temp/
-
   commit_to_master:
     name: Add and commit the new .mez to the master branch
     runs-on: windows-latest
     needs: build_mez
     steps:
-      - name: Checkout master repo
-        uses: actions/checkout@v3
-        with:
-          ref: 'master'
-
       - name: Download .mez 
         uses: actions/download-artifact@v3
         with:
           name: .mez artifact
 
-      - name: Copy .mez from Dev to master directory
-        run: cp $GITHUB_WORKSPACE/workflow/temp/JamfPro.mez ./
+      - name: checkout master branch
+        uses: actions/checkout@v3
+        with:
+          ref: 'master'
+      
+      - name: Upload .mez to master directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: .mez artifact
 
       - name: Add and commit changes to master
         uses: EndBug/add-and-commit@v9
