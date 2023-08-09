@@ -53,14 +53,8 @@ jobs:
           name: .mez artifact
           path: .\JamfPro.mez
 
-      - name: Checkout again for token
-        uses: actions/checkout@v3
-
-      - name: Commit and Push Changes
-        run: |
-          git config --global user.name "Automated GitHub Action"
-          git config --global user.email "anemailaddress@jamf.com"
-          git add JamfPro.mez
-          git commit -m "Automated update to .mez file"
-          git push
+      - name: add and commit .mez changes
+        uses: EndBug/add-and-commit@v9
+        with: 
+          add: 'JamfPro.mez'
 
