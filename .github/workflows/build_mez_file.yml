@@ -43,6 +43,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: .mez artifact
+          path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
 
       - name: checkout master branch
         uses: actions/checkout@v3
