@@ -51,7 +51,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: .mez artifact
-          path: .\JamfPro.mez
+          path: JamfPro.mez
 
       - name: add and commit .mez changes
         uses: EndBug/add-and-commit@v9
