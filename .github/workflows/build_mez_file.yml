@@ -39,21 +39,16 @@ jobs:
     runs-on: windows-latest
     needs: build_mez
     steps:
-      - name: Download .mez 
-        uses: actions/download-artifact@v3
-        with:
-          name: .mez artifact
-          path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
-
       - name: checkout master branch
         uses: actions/checkout@v3
         with:
           ref: 'master'
       
-      - name: Upload .mez to master directory
-        uses: actions/upload-artifact@v2
+      - name: Download .mez 
+        uses: actions/download-artifact@v3
         with:
           name: .mez artifact
+          path: .\JamfPro.mez
 
       - name: Add and commit changes to master
         uses: EndBug/add-and-commit@v9
