@@ -1,4 +1,4 @@
-name: Build .mez file and release on master branch
+name: Build .mez file and add upload to bin
 
 on:
   workflow_dispatch:
@@ -28,8 +28,43 @@ jobs:
         working-directory: JamfPro
         run: msbuild /restore /consoleloggerparameters:NoSummary /property:GenerateFullPaths=true
 
-      - name: Upload .mez 
+      - name: Upload .mez to develop branch bin
         uses: actions/upload-artifact@v2
         with:
           name: .mez artifact
           path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
+
+      - name: Make temporary folder for .mez
+        run: mkdir temporary
+
+      - name: Copy .mez to temporary folder
+        run: cp JamfPro/bin/AnyCPU/Debug/JamfPro.mez temporary/
+
+      - name: Upload .mez to develop branch bin
+        uses: actions/upload-artifact@v2
+        with:
+          name: .mez artifact
+          path: JamfPro\bin\AnyCPU\Debug\JamfPro.mez
+
+  commit_to_master:
+    name: Add and commit the new .mez to the master branch
+    runs-on: windows-latest
+    needs: build-mez
+    steps:
+      - name: Checkout master repo
+        uses: actions/checkout@v3
+        with:
+          ref: 'master'
+
+      - name: Download .mez from temporary folder
+        uses: actions/download-artifact@v3
+        with:
+          name: .mez artifact
+
+      - name: Upload .mez to master branch main folder
+        run: cp temporary/*.mez JamfPro.mez
+
+      - name: Add and commit changes to master
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'JamfPro.mez'
