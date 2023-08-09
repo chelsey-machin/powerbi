@@ -53,7 +53,8 @@ jobs:
           name: .mez artifact
           path: .\JamfPro.mez
 
-      - name: Add and commit changes to master
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: 'JamfPro.mez'
+      - name: Commit and Push Changes
+        run: |
+          git add JamfPro.mez
+          git commit -m "Automated update to .mez file"
+          git push
