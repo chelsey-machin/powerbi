@@ -45,7 +45,7 @@ jobs:
           ref: 'master'
       
       - name: Remove Existing .mez File
-        run: rm -f JamfPro.mez
+        run: rm -force JamfPro.mez
       
       - name: Download .mez 
         uses: actions/download-artifact@v3
